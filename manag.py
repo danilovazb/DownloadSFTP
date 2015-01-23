@@ -4,13 +4,26 @@
 
 import psycopg2
 import sftp_format
-import os,sys
+import os,sys,time,psutil
 import procname
 
 global guarda_pid
 global lista_thread
 guarda_pid = {}
 lista_threads = []
+
+def monitor(pid):
+        while True:
+                time.sleep(10)
+                if psutil.pid_exists(int(pid)) == True:         
+                	p = psutil.Process(int(pid))
+                        if p.status() == psutil.STATUS_ZOMBIE:
+                        	print("Processo ZOMBIE: %s" % (pid))
+                        else:
+                                print("Existe: %s" % (pid))
+                else:
+                        print("Processo MORTO: %s" % (pid))
+
 
 def proc_filho(ips,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia):
 	sftp_format.processa(ips,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia)
@@ -22,6 +35,7 @@ def proc_pai(ips,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_rem
 	if pid_filho == 0:
 		proc_filho(ips,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia)
 		os.waitpid(pid_filho, 0)
+	#os.system("python mon.py %s &" % (pid_filho))
 	arquivoGrava.write("%s;%s;%s\n" % (banco_dados,codigo,pid_filho))
 	print pid_filho
 
