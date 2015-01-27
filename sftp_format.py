@@ -88,6 +88,7 @@ def baixa_arquivos(origem,destino,ip,usuario,senha,dir_mover_remoto,nome_real,di
 	now = datetime.now()
 	conecta = psycopg2.connect(dbname=banco_dados, user='danilo', host='127.0.0.1', password='danilo123')
         query = conecta.cursor()
+ME            BLOG            BUY NOW
         query.execute("UPDATE servidor_arquivo SET situacao = 'ONLINE', desc_situacao = '%s-%s-%s %s:%s:%s ARQ_BAIXADO: %s' WHERE codigo = %s" % (str(now.day),\
                                                                                                                                                 str(now.month),\
                                                                                                                                                 str(now.year),\
