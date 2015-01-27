@@ -37,7 +37,7 @@ include('class/conect.php');
       <div class="container">
         <div class="navbar-header">
           <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
-            <span class="sr-only"></span>
+            <span class="sr-only">Toggle navigation</span>
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
@@ -131,6 +131,7 @@ include('class/conect.php');
 
     </div><!-- /.container -->
 
+<div class="container">
 
 <div class="bs-example" data-example-id="striped-table">
     <table class="table table-striped">
@@ -143,8 +144,10 @@ include('class/conect.php');
 	  <th>PROTOCOLO</th>
 	  <th>DIR REMOTO</th>
 	  <th>FREQ</th>
-	  <th>SUFIXO</th>
 	  <th>PREFIXO</th>
+	  <th>SUFIXO</th>
+	  <th>SITUACAO</th>
+          <th>DESC_SITUACAO</th>
 	  <th>BANCO DADOS</th>
         </tr>
       </thead>
@@ -180,6 +183,8 @@ $result2=pg_query($vai, "SELECT * FROM servidor_arquivo;");
 	echo "<td>".$consulta2['frequencia']."</td>";
 	echo "<td>".$consulta2['prefixo']."</td>";
 	echo "<td>".$consulta2['sufixo']."</td>";
+	echo "<td>".$consulta2['situacao']."</td>";
+	echo "<td>".$consulta2['desc_situacao']."</td>";
 	echo "<td>".$banco_dados."</td>";
        	echo "</tr>";
      }
@@ -190,6 +195,7 @@ $result2=pg_query($vai, "SELECT * FROM servidor_arquivo;");
 ?>
 </tbody>
     </table>
+</div>
   </div><!-- /example -->
 
 

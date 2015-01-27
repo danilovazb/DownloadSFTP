@@ -12,11 +12,11 @@ global lista_thread
 guarda_pid = {}
 lista_threads = []
 
-def proc_filho(ips,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia,protocolo):
+def proc_filho(ips,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia,protocolo,banco_dados,codigo):
 	if protocolo == 'ftp' or protocolo == 'FTP':
-		ftp_format.processa(ips,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia)
+		ftp_format.processa(ips,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia,banco_dados,codigo)
 	elif protocolo == 'sftp' or protocolo == 'SFTP' or protocolo == 'scp' or protocolo == 'SCP':
-		sftp_format.processa(ips,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia)
+		sftp_format.processa(ips,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia,banco_dados,codigo)
 	else:
 		print "Falta o protocolo correto\nProtocolo atual: %s" % protocolo
 	#os._exit(0)
@@ -25,7 +25,7 @@ def proc_pai(ips,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_rem
 	arquivoGrava = open('.pid.fhs','a')
 	pid_filho = os.fork()
 	if pid_filho == 0:
-		proc_filho(ips,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia,protocolo)
+		proc_filho(ips,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia,protocolo,banco_dados,codigo)
 		os.waitpid(pid_filho, 0)
 	#os.system("python mon.py %s %s &" % (banco_dados,codigo))
 	arquivoGrava.write("%s;%s;%s\n" % (banco_dados,codigo,pid_filho))
@@ -61,7 +61,7 @@ def restart(nome_banco,id_tabela,resultado):
                 observacao = row[14]
                 dtapagou = row[15]
                 login_apagou = row[16]
-		dir_local = "%s%s/" % (nome_banco,codigo)
+		dir_local = "%s/" % (nome_banco)
                 nome_processo = "%s%s" % (nome_banco,codigo)
                 procname.setprocname(nome_processo)
                 print nome_processo
@@ -130,7 +130,7 @@ def verifica_inicio():
                                         observacao = row[14]
                                         dtapagou = row[15]
                                         login_apagou = row[16]
-					dir_local = "%s%s/" % (banco_dados,codigo)
+					dir_local = "%s/" % (banco_dados)
                                         nome_processo = "%s%s" % (banco_dados,codigo)
                                         procname.setprocname(nome_processo)
                                         proc_pai(ips,\
