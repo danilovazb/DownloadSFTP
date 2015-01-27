@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 import paramiko
 import time
-import sys,subprocess
+import sys,subprocess,os
+from datetime import datetime
 
 #####################################################################################################
 #
@@ -12,35 +13,46 @@ import sys,subprocess
 #####################################################################################################
 def lista_arquivos(ip,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_remoto,dir_local):
 	global ssh
-
+	
 	#### Faz a verificação do ultimo caracter do caminho do diretório
 	#### para ver se existe ou não a / no fim, caso não tenha ele
 	#### atribui ela no final, evitando erro de string
 	ultimo_char_dir_remoto = dir_remoto[len(dir_remoto)-1]
 	if ultimo_char_dir_remoto != '/':
 		dir_remoto = "%s/" % (dir_remoto)
-
-	ssh = paramiko.SSHClient()
-	ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-	ssh.connect(ip, username=usuario, password=senha)
-	stdin, stdout, stderr = ssh.exec_command("ls -la %s" % (dir_remoto))
-	arq_dir_remoto = stdout.readlines()
-	for i in range(len(arq_dir_remoto)):
-		val_nome_real = len(arq_dir_remoto[i].split(' '))
-		nome_real = arq_dir_remoto[i].split(' ')[val_nome_real-1]
-		if prefixo in nome_real and sufixo in nome_real:
-			origem = "%s%s" % (dir_remoto,nome_real)
-			destino = "%s%s" % (dir_local,nome_real)
-			baixa_arquivos(origem.strip(),destino.strip(),ip,usuario,senha,dir_mover_remoto,nome_real)
-		
-		#### Ainda estou tratando isso, rsrsrs, logo atribuo alguma
-		#### mensagem aqui, caso queira add, fique avonts rsrs	
-  		elif prefixo is not nome_real and sufixo is nome_real:
-			sopranaoficarvazio = "0"
-  		elif prefixo is nome_real and sufixo is not nome_real:
-			sopranaoficarvazio = "0"
-  		else:
-			sopranaoficarvazio = "0"
+	try:
+		ssh = paramiko.SSHClient()
+		ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+		ssh.connect(ip, username=usuario, password=senha)
+		stdin, stdout, stderr = ssh.exec_command("ls -la %s" % (dir_remoto))
+		arq_dir_remoto = stdout.readlines()
+		for i in range(len(arq_dir_remoto)):
+			val_nome_real = len(arq_dir_remoto[i].split(' '))
+			nome_real = arq_dir_remoto[i].split(' ')[val_nome_real-1]
+			if prefixo in nome_real and sufixo in nome_real:
+				origem = "%s%s" % (dir_remoto,nome_real)
+				destino = "%s%s" % (dir_local.replace('ifclick_',''),nome_real)
+				baixa_arquivos(origem.strip(),destino.strip(),ip,usuario,senha,dir_mover_remoto,nome_real,dir_local)
+			
+			#### Ainda estou tratando isso, rsrsrs, logo atribuo alguma
+			#### mensagem aqui, caso queira add, fique avonts rsrs	
+			elif prefixo is not nome_real and sufixo is nome_real:
+				sopranaoficarvazio = "0"
+			elif prefixo is nome_real and sufixo is not nome_real:
+				sopranaoficarvazio = "0"
+			else:
+				sopranaoficarvazio = "0"
+	except Exception as ex:
+		now = datetime.now()
+		arquivoGrava = open('log_erro.log','a')
+		arquivoGrava.write("%s-%s-%s %s:%s:%s Log Excetion: Cliente - %s --> ERRO - %s\n" % (str(now.day),\
+													str(now.month),\
+													str(now.year),\
+													str(now.hour),\
+													str(now.minute),\
+													str(now.second),\
+													dir_local,\
+													str(ex)))
 
 #####################################################################################################
 #
@@ -49,10 +61,18 @@ def lista_arquivos(ip,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_remoto,d
 # o arquivo remoto ou se pode ser apagado do servidor.
 #
 #####################################################################################################
-def baixa_arquivos(origem,destino,ip,usuario,senha,dir_mover_remoto,nome_real):
-	ftp = ssh.open_sftp() 
-	ftp.get(origem, destino)
-	ftp.close()
+def baixa_arquivos(origem,destino,ip,usuario,senha,dir_mover_remoto,nome_real,dir_local):
+	print "CHEGUEI ATE AQUI"	
+	if os.path.exists(dir_local) == True:
+		ftp = ssh.open_sftp() 
+		ftp.get(origem, destino)
+		ftp.close()
+	else:
+		os.makedirs(dir_local, 0755)
+		ftp = ssh.open_sftp() 
+                ftp.get(origem, destino)
+                ftp.close()
+		
 	
 	#### Caso exista algum diretório atribuido a variável
 	#### dir_mover_remoto que representa o diretório remoto

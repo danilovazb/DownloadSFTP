@@ -1,6 +1,10 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+#
+
 from flask import Flask
-import json
-from flask import jsonify
+#import json
+#from flask import jsonify
 import manag,os,subprocess
 
 app = Flask(__name__)
@@ -22,10 +26,14 @@ def receita_consultar(status):
                 stats = []
                 stats = status.split(',')
                 process = "%s%s" % (stats[1],stats[2])
-		cmm = "ps -ef | grep '%s' | awk '{ print $2 }'" % (process)
+		cmm = "ps -ef | grep '%s' | grep -v 'grep' | awk '{ print $2 }'" % (process)
 		resultado = subprocess.check_output(cmm, shell=True)
 		resultado = resultado.strip()
 		os.kill(int(resultado.split('\n')[0]),9)
+		cmm = "ps -ef | grep 'mon.py %s' | grep -v 'grep' | awk '{ print $2 }'" % (stats[1])
+		resultado = subprocess.check_output(cmm, shell=True)
+                resultado = resultado.strip()
+                os.kill(int(resultado.split('\n')[0]),9)
 
 	#### Praticamente o mesmo que o stop, mas ele restarta o processo todo
 	#### pega o pid do processo, mata ele e inicia um novo com base no
@@ -34,14 +42,14 @@ def receita_consultar(status):
 		stats = []
 		stats = status.split(',')
 		process = "%s%s" % (stats[1],stats[2])
-		cmm = "ps -auxf | grep '%s*' | awk '{ print $2 }'" % (process)
+		cmm = "ps -auxf | grep '%s*' | grep -v 'grep' | awk '{ print $2 }'" % (process)
                 resultado = subprocess.check_output(cmm, shell=True)
 		result = []
 		result = resultado.strip().split('\n')
                 os.kill(int(result[len(result)-1]),9)
-		banco = stats[1].strip()
-		id_tab = stats[2].strip()
-		os.system("python manag.py restart %s %s %s" % (banco, id_tab, resultado.strip()))
+		#banco = stats[1].strip()
+		#id_tab = stats[2].strip()
+		#os.system("python manag.py restart %s %s %s" % (banco, id_tab, resultado.strip()))
 	else:
 		print "Comando errado no navegador"
 

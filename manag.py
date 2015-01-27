@@ -3,7 +3,7 @@
 #
 
 import psycopg2
-import sftp_format
+import sftp_format,ftp_format
 import os,sys,time,psutil
 import procname
 
@@ -12,30 +12,22 @@ global lista_thread
 guarda_pid = {}
 lista_threads = []
 
-def monitor(pid):
-        while True:
-                time.sleep(10)
-                if psutil.pid_exists(int(pid)) == True:         
-                	p = psutil.Process(int(pid))
-                        if p.status() == psutil.STATUS_ZOMBIE:
-                        	print("Processo ZOMBIE: %s" % (pid))
-                        else:
-                                print("Existe: %s" % (pid))
-                else:
-                        print("Processo MORTO: %s" % (pid))
-
-
-def proc_filho(ips,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia):
-	sftp_format.processa(ips,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia)
+def proc_filho(ips,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia,protocolo):
+	if protocolo == 'ftp' or protocolo == 'FTP':
+		ftp_format.processa(ips,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia)
+	elif protocolo == 'sftp' or protocolo == 'SFTP' or protocolo == 'scp' or protocolo == 'SCP':
+		sftp_format.processa(ips,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia)
+	else:
+		print "Falta o protocolo correto\nProtocolo atual: %s" % protocolo
 	#os._exit(0)
 
-def proc_pai(ips,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia,codigo,banco_dados):
+def proc_pai(ips,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia,codigo,banco_dados,protocolo):
 	arquivoGrava = open('.pid.fhs','a')
 	pid_filho = os.fork()
 	if pid_filho == 0:
-		proc_filho(ips,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia)
+		proc_filho(ips,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia,protocolo)
 		os.waitpid(pid_filho, 0)
-	#os.system("python mon.py %s &" % (pid_filho))
+	#os.system("python mon.py %s %s &" % (banco_dados,codigo))
 	arquivoGrava.write("%s;%s;%s\n" % (banco_dados,codigo,pid_filho))
 	print pid_filho
 
@@ -45,7 +37,7 @@ def restart(nome_banco,id_tabela,resultado):
         usuario = 'danilo'
         senha = 'danilo123'
         servidor = 'localhost'
-	dir_local = 'Download/'
+	#dir_local = 'Download/'
         conecta = psycopg2.connect(dbname=nome_banco, user=usuario, host=servidor, password=senha)
         query = conecta.cursor()
         query.execute("SELECT * from servidor_arquivo WHERE codigo = %s" % (id_tabela))
@@ -69,29 +61,54 @@ def restart(nome_banco,id_tabela,resultado):
                 observacao = row[14]
                 dtapagou = row[15]
                 login_apagou = row[16]
+		dir_local = "%s%s/" % (nome_banco,codigo)
                 nome_processo = "%s%s" % (nome_banco,codigo)
                 procname.setprocname(nome_processo)
                 print nome_processo
-                proc_pai(ips,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia,codigo,nome_banco)
+                proc_pai(ips,\
+			login,\
+			senha,\
+			prefixo,\
+			sufixo,\
+			diretorio_remoto,\
+			diretorio_mover_remoto,\
+			dir_local,\
+			frequencia,\
+			codigo,\
+			nome_banco,\
+			protocolo)
 
+#####################################################################################################
+#
+# Inicia a configuração e os parametros passados no inicio caso seja 'start' o parametro passado
+#
+#####################################################################################################
 def verifica_inicio():
 	os.system("rm .pid.fhs")
-        banco = "todos"
-        usuario = "danilo"
-        servidor = "localhost"
-        senha = "danilo123"
-        dir_local = "Download/"
+	#### Configuração para acesso ao banco de dados #
+        banco = "todos"					#
+        usuario = "danilo"				#
+        servidor = "localhost"				#
+        senha = "danilo123"				#
+        #dir_local = "Download/"			#
+	#################################################
         conn = psycopg2.connect(dbname=banco, user=usuario, host=servidor, password=senha)
         cur = conn.cursor()
+	#### Primeiro 'select', pega os bancos de dados dentro do servidor
         cur.execute("""SELECT * from pg_database WHERE datname NOT IN ('postgres','template0','template1')""")
         linhas_database = cur.fetchall()
+	#### Percorre todos os banco de dados da tabela 'datname' onde 
+	#### contem os nomes dos bancos
         for linha_db in linhas_database:
                 banco_dados = linha_db[0]
                 conn2 = psycopg2.connect(dbname=banco_dados, user=usuario, host=servidor, password='danilo123')
                 cur2 = conn2.cursor()
+		#### Segundo 'select' lista as tabelas do banco de dados selecionado no primeiro select.
                 cur2.execute("SELECT * FROM pg_catalog.pg_tables WHERE schemaname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')")
                 lista_tabelas = cur2.fetchall()
+		#### Percorre as tabelas verificando se existe a tabela 'servidor_arquivo' no banco de dados
                 for lista_tb in lista_tabelas:
+			#### Caso exista no banco de dados a tabela 'servidor_arquivo' faz o 'select' nela e pega os resultados.
                         if lista_tb[1].strip() == 'servidor_arquivo':
                                 cur2.execute("SELECT * FROM servidor_arquivo")
                                 rows = cur2.fetchall()
@@ -113,11 +130,25 @@ def verifica_inicio():
                                         observacao = row[14]
                                         dtapagou = row[15]
                                         login_apagou = row[16]
+					dir_local = "%s%s/" % (banco_dados,codigo)
                                         nome_processo = "%s%s" % (banco_dados,codigo)
                                         procname.setprocname(nome_processo)
-                                        proc_pai(ips,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia,codigo,banco_dados)
+                                        proc_pai(ips,\
+						login,\
+						senha,\
+						prefixo,\
+						sufixo,\
+						diretorio_remoto,\
+						diretorio_mover_remoto,\
+						dir_local,\
+						frequencia,\
+						codigo,\
+						banco_dados,\
+						protocolo)
+					os.system("python mon.py %s %s &" % (banco_dados,codigo))
 
 
+#### Recebe os parâmentros 'start' ou 'restart'.
 if __name__ == '__main__':
 	argumento = sys.argv[1]
 	if 'start' == argumento:

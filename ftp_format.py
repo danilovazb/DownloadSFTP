@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 from ftplib import FTP
 import time
-import sys,subprocess
+import sys,subprocess,os
 
 #####################################################################################################
 #
@@ -25,13 +25,23 @@ def lista_arquivos(ip,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_remoto,d
 	ftp.login(usuario,senha)
 	ftp.cwd(dir_remoto)
 	ftp.retrlines('NLST', lista_arquivos.append)
-	for i in range(len(lista_arquivos)):
-        	nome_real = lista_arquivos[i].strip()
-        	nome_local = nome_real.split('/')[len(nome_real.split('/'))-1]
-        	if prefixo in nome_local and sufixo in nome_local:
-                	ftp.retrbinary('RETR %s' % nome_real, open('Download/%s' % nome_local, 'wb').write)
-       		else:
-                	print "%s" % nome_real
+	if os.path.exists(dir_local) == True:
+		for i in range(len(lista_arquivos)):
+			nome_real = lista_arquivos[i].strip()
+			nome_local = nome_real.split('/')[len(nome_real.split('/'))-1]
+			if prefixo in nome_local and sufixo in nome_local:
+				ftp.retrbinary('RETR %s' % nome_real, open('%s%s' % (dir_local,nome_local), 'wb').write)
+			else:
+				print "%s" % nome_real
+	else:
+                os.makedirs(dir_local, 0755)
+		for i in range(len(lista_arquivos)):
+                        nome_real = lista_arquivos[i].strip()
+                        nome_local = nome_real.split('/')[len(nome_real.split('/'))-1]
+                        if prefixo in nome_local and sufixo in nome_local:
+                                ftp.retrbinary('RETR %s' % nome_real, open('%s%s' % (dir_local,nome_local), 'wb').write)
+                        else:
+                                print "%s" % nome_real
 
 	####
 
