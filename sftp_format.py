@@ -3,7 +3,7 @@
 import paramiko
 import psycopg2
 import time
-import sys,subprocess,os
+import sys,subprocess,os,hashlib
 from datetime import datetime
 
 #####################################################################################################
@@ -14,7 +14,7 @@ from datetime import datetime
 #####################################################################################################
 def lista_arquivos(ip,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_remoto,dir_local,banco_dados,id_tabela):
 	global ssh
-	
+	print "lista_arquivos"
 	#### Faz a verificação do ultimo caracter do caminho do diretório
 	#### para ver se existe ou não a / no fim, caso não tenha ele
 	#### atribui ela no final, evitando erro de string
@@ -32,7 +32,7 @@ def lista_arquivos(ip,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_remoto,d
 			nome_real = arq_dir_remoto[i].split(' ')[val_nome_real-1]
 			if prefixo in nome_real and sufixo in nome_real:
 				origem = "%s%s" % (dir_remoto,nome_real)
-				destino = "%s%s" % (dir_local.replace('ifclick_',''),nome_real)
+				destino = "%s%s/%s" % (dir_local.replace('ifclick_',''),usuario,nome_real)
 				baixa_arquivos(origem.strip(),destino.strip(),ip,usuario,senha,dir_mover_remoto,nome_real,dir_local,banco_dados,id_tabela)
 				
 			elif prefixo is not nome_real and sufixo is nome_real:
@@ -65,7 +65,7 @@ def lista_arquivos(ip,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_remoto,d
 																			id_tabela))
 			conecta.commit()
 		elif '530 Login incorrect' in str(ex) or 'Authentication failed' in str(ex):
-			query.execute("UPDATE servidor_arquivo SET situacao = 'ONLINE', desc_situacao = '%s-%s-%s %s:%s:%s Log: %s' WHERE codigo = %s" % (str(now.day),\
+			query.execute("UPDATE servidor_arquivo SET situacao = 'FALHA_LOGIN', desc_situacao = '%s-%s-%s %s:%s:%s Log: %s' WHERE codigo = %s" % (str(now.day),\
                                                                                                                                                         str(now.month),\
                                                                                                                                                         str(now.year),\
                                                                                                                                                         str(now.hour),\
@@ -84,18 +84,18 @@ def lista_arquivos(ip,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_remoto,d
 #
 #####################################################################################################
 def baixa_arquivos(origem,destino,ip,usuario,senha,dir_mover_remoto,nome_real,dir_local,banco_dados,id_tabela):
-	#print "CHEGUEI ATE AQUI"
+	print "baixa_arquivos"
+	dir_local = "%s%s" % (dir_local, usuario)
 	now = datetime.now()
 	conecta = psycopg2.connect(dbname=banco_dados, user='danilo', host='127.0.0.1', password='danilo123')
         query = conecta.cursor()
-ME            BLOG            BUY NOW
         query.execute("UPDATE servidor_arquivo SET situacao = 'ONLINE', desc_situacao = '%s-%s-%s %s:%s:%s ARQ_BAIXADO: %s' WHERE codigo = %s" % (str(now.day),\
                                                                                                                                                 str(now.month),\
                                                                                                                                                 str(now.year),\
                                                                                                                                                 str(now.hour),\
                                                                                                                                                 str(now.minute),\
                                                                                                                                                 str(now.second),\
-                                                                                                                                                destino,\
+                                                                                                                                                nome_real,\
                                                                                                                                                 id_tabela))
         conecta.commit()
 
@@ -103,11 +103,31 @@ ME            BLOG            BUY NOW
 		ftp = ssh.open_sftp() 
 		ftp.get(origem, destino)
 		ftp.close()
+		hasher = hashlib.md5()
+		tam_arquivo = os.path.getsize(destino)
+		with open(destino, 'rb') as afile:
+			buf = afile.read()
+			hasher.update(buf)
+		md5 = hasher.hexdigest()
+		tamanho = "%i" % (tam_arquivo)
+		query.execute("INSERT INTO log_servidor_arquivo (nome, tamanho, md5) values ('%s',%s,'%s')" % (nome_real,tamanho,md5))
+	        conecta.commit()
+		
 	else:
 		os.makedirs(dir_local, 0755)
 		ftp = ssh.open_sftp() 
                 ftp.get(origem, destino)
                 ftp.close()
+		hasher = hashlib.md5()
+                tam_arquivo = os.path.getsize(destino)
+                with open(destino, 'rb') as afile:
+                        buf = afile.read()
+                        hasher.update(buf)
+                md5 = hasher.hexdigest()
+                tamanho = "%i" % (tam_arquivo)
+                query.execute("INSERT INTO log_servidor_arquivo (nome, tamanho, md5) values ('%s',%s,'%s')" % (nome_real,tamanho,md5))
+                conecta.commit()
+
 		
 	
 	#### Caso exista algum diretório atribuido a variável

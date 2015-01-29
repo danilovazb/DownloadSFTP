@@ -4,7 +4,7 @@ from ftplib import FTP
 from datetime import datetime
 import psycopg2
 import time
-import sys,subprocess,os
+import sys,subprocess,os,hashlib
 
 #####################################################################################################
 #
@@ -19,6 +19,8 @@ def lista_arquivos(ip,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_remoto,d
 	#### para ver se existe ou não a / no fim, caso não tenha ele
 	#### atribui ela no final, evitando erro de string
 	ultimo_char_dir_remoto = dir_remoto[len(dir_remoto)-1]
+	dir_local = "%s%s/" % (dir_local, usuario)
+#	destino = "%s%s" % (dir_local,nome_local)
 	if ultimo_char_dir_remoto != '/':
 		dir_remoto = "%s/" % (dir_remoto)
 	####
@@ -32,13 +34,15 @@ def lista_arquivos(ip,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_remoto,d
 			for i in range(len(lista_arquivos)):
 				nome_real = lista_arquivos[i].strip()
 				nome_local = nome_real.split('/')[len(nome_real.split('/'))-1]
+				destino = "%s%s" % (dir_local,nome_local)
 				if prefixo in nome_local and sufixo in nome_local:
 					ftp.retrbinary('RETR %s' % nome_real, open('%s%s' % (dir_local,nome_local), 'wb').write)
 					if dir_mover_remoto != None:
 				                ftp.delete(nome_real)
         				else:
          				        #ssh.exec_command("rm %s" % (origem))
-						print "LLL"
+						nome_rename = "%s%s" % (dir_mover_removo,nome_local)
+						ftp.rename(nome_local,nome_rename)
 					now = datetime.now()
 					conecta = psycopg2.connect(dbname=banco_dados, user='danilo', host='127.0.0.1', password='danilo123')
 					query = conecta.cursor()
@@ -48,8 +52,17 @@ def lista_arquivos(ip,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_remoto,d
 																					str(now.hour),\
 																					str(now.minute),\
 																					str(now.second),\
-																					nome_real,\
+																					nome_local,\
 																					id_tabela))
+					conecta.commit()
+					hasher = hashlib.md5()
+					tam_arquivo = os.path.getsize(destino)
+					with open(destino, 'rb') as afile:
+						buf = afile.read()
+						hasher.update(buf)
+					md5 = hasher.hexdigest()
+					tamanho = "%i" % (tam_arquivo)
+					query.execute("INSERT INTO log_servidor_arquivo (nome, tamanho, md5) values ('%s',%s,'%s')" % (nome_real,tamanho,md5))
 					conecta.commit()
 
 				else:
@@ -59,6 +72,7 @@ def lista_arquivos(ip,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_remoto,d
 			for i in range(len(lista_arquivos)):
 				nome_real = lista_arquivos[i].strip()
 				nome_local = nome_real.split('/')[len(nome_real.split('/'))-1]
+				destino = "%s%s" % (dir_local,nome_local)
 				if prefixo in nome_local and sufixo in nome_local:
 					ftp.retrbinary('RETR %s' % nome_real, open('%s%s' % (dir_local,nome_local), 'wb').write)
 					now = datetime.now()
@@ -70,8 +84,17 @@ def lista_arquivos(ip,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_remoto,d
                                                                                                                                                                         str(now.hour),\
                                                                                                                                                                         str(now.minute),\
                                                                                                                                                                         str(now.second),\
-                                                                                                                                                                        nome_real,\
+                                                                                                                                                                        nome_local,\
                                                                                                                                                                         id_tabela))
+                                        conecta.commit()
+					hasher = hashlib.md5()
+                                        tam_arquivo = os.path.getsize(destino)
+                                        with open(destino, 'rb') as afile:
+                                                buf = afile.read()
+                                                hasher.update(buf)
+                                        md5 = hasher.hexdigest()
+                                        tamanho = "%i" % (tam_arquivo)
+                                        query.execute("INSERT INTO log_servidor_arquivo (nome, tamanho, md5) values ('%s',%s,'%s')" % (nome_real,tamanho,md5))
                                         conecta.commit()
 				else:
 					print "%s" % nome_real
@@ -101,7 +124,7 @@ def lista_arquivos(ip,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_remoto,d
                                                                                                                                                         id_tabela))
 			conecta.commit()
 		elif '530 Login incorrect' in str(ex) or 'Authentication failed' in str(ex):
-                        query.execute("UPDATE servidor_arquivo SET situacao = 'ONLINE', desc_situacao = '%s-%s-%s %s:%s:%s Log: %s' WHERE codigo = %s" % (str(now.day),\
+                        query.execute("UPDATE servidor_arquivo SET situacao = 'FALHA_LOGIN', desc_situacao = '%s-%s-%s %s:%s:%s Log: %s' WHERE codigo = %s" % (str(now.day),\
                                                                                                                                                         str(now.month),\
                                                                                                                                                         str(now.year),\
                                                                                                                                                         str(now.hour),\
