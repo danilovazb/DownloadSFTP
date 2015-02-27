@@ -4,6 +4,7 @@ CREATE TABLE servidor_arquivo
 	dtcadastro timestamp DEFAULT current_timestamp NOT NULL,
 	cod_template integer, -- REFERENCES template(codigo),
 	ips varchar(100) NOT NULL,
+	portas varchar(100) NOT NULL DEFAULT '',
 	login varchar(20) NOT NULL, 
 	pass varchar(20) NOT NULL, 
 	protocolo varchar(20) NOT NULL DEFAULT 'ftp', --sftp,ftp

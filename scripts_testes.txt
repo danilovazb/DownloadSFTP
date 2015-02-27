@@ -1,0 +1,40 @@
+import psycopg2
+import psycopg2.extras
+usuario = 'danilo'
+senha = 'danilo123'
+servidor = 'localhost'
+banco = 'cliente4'
+conn2 = psycopg2.connect(dbname=banco, user=usuario, host=servidor, password=senha)
+cur2 = conn2.cursor(cursor_factory=psycopg2.extras.DictCursor)
+cur2.execute("SELECT * FROM servidor_arquivo")
+rows = cur2.fetchall()
+for i in range(len(rows)):
+	rows[i]['portas']
+
+===========================================================================================
+from ftplib import FTP
+lista_arquivos = []
+ip = '187.72.87.227'
+portas = '2210'
+usuario = 'ftpcrespo'
+senha = '123456A@'
+dir_remoto = '/uso comum/boletos/'
+ftp = FTP()
+ftp.connect(ip,portas)
+ftp.login(usuario,senha)
+ftp.cwd(dir_remoto)
+ftp.retrlines('NLST', lista_arquivos.append)
+============================================================================================
+from ftplib import FTP
+lista_arquivos = []
+ip = '192.168.2.1'
+portas = '21'
+usuario = 'admin'
+senha = 'Roteador10'
+dir_remoto = '/'
+ftp = FTP()
+ftp.connect(ip,portas,)
+ftp.login(usuario,senha)
+ftp.cwd(dir_remoto)
+ftp.retrlines('NLST', lista_arquivos.append)
+

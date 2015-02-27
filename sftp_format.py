@@ -3,28 +3,28 @@
 import paramiko
 import psycopg2
 import time
-import sys,subprocess,os,hashlib
+import json
+import sys,subprocess,os,hashlib,linecache
 from datetime import datetime
 
-#####################################################################################################
-#
-# lista_arquivos(), 
-# Recebe os valores da classe processa() e faz a conexão sftp pelo paramiko.
-#
-#####################################################################################################
-def lista_arquivos(ip,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_remoto,dir_local,banco_dados,id_tabela):
+def PrintException():
+	exc_type, exc_obj, tb = sys.exc_info()
+	f = tb.tb_frame
+	lineno = tb.tb_lineno
+	filename = f.f_code.co_filename
+	linecache.checkcache(filename)
+	line = linecache.getline(filename, lineno, f.f_globals)
+	print 'EXCEPTION IN ({}, LINE {} "{}"): {}'.format(filename, lineno, line.strip(), exc_obj)
+
+def lista_arquivos(ip,portas,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_remoto,dir_local,banco_dados,id_tabela):
 	global ssh
-	print "lista_arquivos"
-	#### Faz a verificação do ultimo caracter do caminho do diretório
-	#### para ver se existe ou não a / no fim, caso não tenha ele
-	#### atribui ela no final, evitando erro de string
 	ultimo_char_dir_remoto = dir_remoto[len(dir_remoto)-1]
 	if ultimo_char_dir_remoto != '/':
 		dir_remoto = "%s/" % (dir_remoto)
 	try:
 		ssh = paramiko.SSHClient()
 		ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-		ssh.connect(ip, username=usuario, password=senha)
+		ssh.connect(ip,port=int(portas), username=usuario, password=senha)
 		stdin, stdout, stderr = ssh.exec_command("ls -la %s" % (dir_remoto))
 		arq_dir_remoto = stdout.readlines()
 		for i in range(len(arq_dir_remoto)):
@@ -44,6 +44,7 @@ def lista_arquivos(ip,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_remoto,d
 	except Exception as ex:
 		now = datetime.now()
 		arquivoGrava = open('log_erro.log','a')
+		PrintException()
 		arquivoGrava.write("%s-%s-%s %s:%s:%s Log Excetion: Cliente - %s --> ERRO - %s\n" % (str(now.day),\
 													str(now.month),\
 													str(now.year),\
@@ -52,7 +53,12 @@ def lista_arquivos(ip,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_remoto,d
 													str(now.second),\
 													dir_local,\
 													str(ex)))
-		conecta = psycopg2.connect(dbname=banco_dados, user='danilo', host='127.0.0.1', password='danilo123')
+		raw_credenciais = open('login_banco.json').read()
+	        credencial = json.loads(raw_credenciais)
+		usuario = credencial['login']
+		senha = credencial['pass']
+		servidor = credencial['address']
+		conecta = psycopg2.connect(dbname=banco_dados, user=usuario, host=servidor, password=senha)
         	query = conecta.cursor()
 		if 'Errno 113' in str(ex):
 		       	query.execute("UPDATE servidor_arquivo SET situacao = 'OFFLINE', desc_situacao = '%s-%s-%s %s:%s:%s Log: %s' WHERE codigo = %s" % (str(now.day),\
@@ -76,18 +82,16 @@ def lista_arquivos(ip,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_remoto,d
 			conecta.commit()
 		
 
-#####################################################################################################
-#
-# baixa_arquivos(), 
-# rece os parametros para baixar o arquivo do servidor e verifica se existe pasta para copiar
-# o arquivo remoto ou se pode ser apagado do servidor.
-#
-#####################################################################################################
 def baixa_arquivos(origem,destino,ip,usuario,senha,dir_mover_remoto,nome_real,dir_local,banco_dados,id_tabela):
 	print "baixa_arquivos"
 	dir_local = "%s%s" % (dir_local, usuario)
 	now = datetime.now()
-	conecta = psycopg2.connect(dbname=banco_dados, user='danilo', host='127.0.0.1', password='danilo123')
+	raw_credenciais = open('login_banco.json').read()
+        credencial = json.loads(raw_credenciais)
+        usuario = credencial['login']
+        senha = credencial['pass']
+        servidor = credencial['address']
+	conecta = psycopg2.connect(dbname=banco_dados, user=usuario, host=servidor, password=senha)
         query = conecta.cursor()
         query.execute("UPDATE servidor_arquivo SET situacao = 'ONLINE', desc_situacao = '%s-%s-%s %s:%s:%s ARQ_BAIXADO: %s' WHERE codigo = %s" % (str(now.day),\
                                                                                                                                                 str(now.month),\
@@ -110,6 +114,7 @@ def baixa_arquivos(origem,destino,ip,usuario,senha,dir_mover_remoto,nome_real,di
 			hasher.update(buf)
 		md5 = hasher.hexdigest()
 		tamanho = "%i" % (tam_arquivo)
+		print tamanho
 		query.execute("INSERT INTO log_servidor_arquivo (nome, tamanho, md5) values ('%s',%s,'%s')" % (nome_real,tamanho,md5))
 	        conecta.commit()
 		
@@ -125,30 +130,20 @@ def baixa_arquivos(origem,destino,ip,usuario,senha,dir_mover_remoto,nome_real,di
                         hasher.update(buf)
                 md5 = hasher.hexdigest()
                 tamanho = "%i" % (tam_arquivo)
+		print tamanho
                 query.execute("INSERT INTO log_servidor_arquivo (nome, tamanho, md5) values ('%s',%s,'%s')" % (nome_real,tamanho,md5))
                 conecta.commit()
 
 		
 	
-	#### Caso exista algum diretório atribuido a variável
-	#### dir_mover_remoto que representa o diretório remoto
-	#### que queira copiar o arquivo depois de baixado ele
-	#### faz a cópia, caso contrário, apaga o arquivo do server
 	if dir_mover_remoto != None:
         	ssh.exec_command("mv %s %s%s" % (origem,dir_mover_remoto,nome_real.strip()))
 	else:
 		ssh.exec_command("rm %s" % (origem))
 
-#####################################################################################################
-#
-# processa(), 
-# recebe valores do manag.py e já faz o controle de tempo estipulado pelo usuario e envia os outros
-# dados para a funcao lista_arquivos(). 
-#
-#####################################################################################################
-def processa(ip,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_remoto,dir_local,tempo,banco_dados,id_tabela):
+def processa(ip,portas,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_remoto,dir_local,tempo,banco_dados,id_tabela):
 	while True:
                 time.sleep(tempo)
-                lista_arquivos(ip,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_remoto,dir_local,banco_dados,id_tabela)
+                lista_arquivos(ip,portas,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_remoto,dir_local,banco_dados,id_tabela)
 
 
