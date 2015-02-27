@@ -5,6 +5,7 @@ from datetime import datetime
 import psycopg2
 import time
 import sys,subprocess,os,hashlib,json,linecache
+import requests
 
 def PrintException():
         exc_type, exc_obj, tb = sys.exc_info()
@@ -69,6 +70,18 @@ def lista_arquivos(ip,portas,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_r
 					tamanho = "%i" % (tam_arquivo)
 					query.execute("INSERT INTO log_servidor_arquivo (nome, tamanho, md5) values ('%s',%s,'%s')" % (nome_real,tamanho,md5))
 					conecta.commit()
+
+					############ Envio POST
+					
+					arquivo = nome_local
+					url = "http://192.168.2.169/3allsys/db/envio_avulso.php"
+					f = {'csv': open(arquivo,'rb')}
+					v = {'login':'ifractal','senha':'danilo','cod_campanha': '41'}
+					r = requests.post(url = url, files = f, data = v)
+					print r.status_code
+					print r.headers
+					print r.text
+					############ Fim Envio POST
 
 				else:
 					print "%s" % nome_real

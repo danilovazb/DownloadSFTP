@@ -11,7 +11,7 @@ rows = cur2.fetchall()
 for i in range(len(rows)):
 	rows[i]['portas']
 
-===========================================================================================
+============================================================================================
 from ftplib import FTP
 lista_arquivos = []
 ip = '187.72.87.227'
@@ -37,4 +37,20 @@ ftp.connect(ip,portas,)
 ftp.login(usuario,senha)
 ftp.cwd(dir_remoto)
 ftp.retrlines('NLST', lista_arquivos.append)
+============================================================================================
+import json
+json_data = open('json.json','r').read()
+data = json.loads(json_data)
+print data['posts']
+============================================================================================
+import requests,sys
+arquivo = sys.argv[1]
+#url = "http://192.168.2.169/3allsys/db/envio_avulso.php"
+url = sys.argv[2]
+f = {'csv': open(arquivo,'rb')}
+v = {'login':'ifractal','senha':'danilo','cod_campanha': '41'}
+r = requests.post(url = url, files = f, data = v)
+print r.status_code
+print r.headers
+print r.text
 
