@@ -14,29 +14,29 @@ global lista_thread
 guarda_pid = {}
 lista_threads = []
 
-def proc_filho(ips,portas,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia,protocolo,banco_dados,codigo):
+def proc_filho(ips,portas,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia,protocolo,banco_dados,json_config,codigo):
 	if protocolo == 'ftp' or protocolo == 'FTP':
 		if portas != None:
-			ftp_format.processa(ips,portas,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia,banco_dados,codigo)
+			ftp_format.processa(ips,portas,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia,banco_dados,json_config,codigo)
 		else:
 			portas = '21'
-			ftp_format.processa(ips,portas,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia,banco_dados,codigo)
+			ftp_format.processa(ips,portas,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia,banco_dados,json_config,codigo)
 
 	elif protocolo == 'sftp' or protocolo == 'SFTP' or protocolo == 'scp' or protocolo == 'SCP':
 		if portas != None:
-			sftp_format.processa(ips,portas,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia,banco_dados,codigo)
+			sftp_format.processa(ips,portas,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia,banco_dados,json_config,codigo)
 		else:
 			portas = '22'
-                	sftp_format.processa(ips,portas,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia,banco_dados,codigo)
+                	sftp_format.processa(ips,portas,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia,banco_dados,json_config,codigo)
 
 	else:
 		print "Falta o protocolo correto\nProtocolo atual: %s" % protocolo
 
-def proc_pai(ips,portas,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia,codigo,banco_dados,protocolo):
+def proc_pai(ips,portas,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia,codigo,banco_dados,json_config,protocolo):
 	arquivoGrava = open('.pid.fhs','a')
 	pid_filho = os.fork()
 	if pid_filho == 0:
-		proc_filho(ips,portas,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia,protocolo,banco_dados,codigo)
+		proc_filho(ips,portas,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia,protocolo,banco_dados,json_config,codigo)
 		os.waitpid(pid_filho, 0)
 	arquivoGrava.write("%s;%s;%s\n" % (banco_dados,codigo,pid_filho))
 	#print pid_filho
@@ -52,7 +52,7 @@ def restart(nome_banco,id_tabela,resultado):
         conecta = psycopg2.connect(dbname=nome_banco, user=usuario, host=servidor, password=senha)
         query = conecta.cursor(cursor_factory=psycopg2.extras.DictCursor)
         query.execute("SELECT * from servidor_arquivo WHERE codigo = %s" % (id_tabela))
-	rows = cur2.fetchall()
+	rows = query.fetchall()
         for i in range(len(rows)):
                 if rows != None:
                         try:
@@ -75,8 +75,9 @@ def restart(nome_banco,id_tabela,resultado):
                                 observacao = rows[i]['observacao']
                                 dtapagou = rows[i]['dtapagou']
                                 login_apagou = rows[i]['login_apagou']
-                                dir_local = "%s/" % (banco_dados)
-                                nome_processo = "%s%s" % (banco_dados,codigo)
+				json_config = rows[i]['json_config']
+                                dir_local = "%s/" % (nome_banco)
+                                nome_processo = "%s%s" % (nome_banco,codigo)
                                 procname.setprocname(nome_processo)
                                 proc_pai(ips,\
                                         portas,\
@@ -89,9 +90,10 @@ def restart(nome_banco,id_tabela,resultado):
                                         dir_local,\
                                         frequencia,\
                                         codigo,\
-                                        banco_dados,\
+                                        nome_banco,\
+					json_config,\
                                         protocolo)
-                                os.system("python mon.py %s %s &" % (banco_dados,codigo))
+                                os.system("python mon.py %s %s &" % (nome_banco,codigo))
                         except KeyError:
                                 codigo = rows[i]['codigo']
                                 dtcadastro = rows[i]['dtcadastro']
@@ -111,8 +113,9 @@ def restart(nome_banco,id_tabela,resultado):
                                 observacao = rows[i]['observacao']
                                 dtapagou = rows[i]['dtapagou']
                                 login_apagou = rows[i]['login_apagou']
-                                dir_local = "%s/" % (banco_dados)
-                                nome_processo = "%s%s" % (banco_dados,codigo)
+				json_config = rows[i]['json_config']
+                                dir_local = "%s/" % (nome_banco)
+                                nome_processo = "%s%s" % (nome_banco,codigo)
                                 procname.setprocname(nome_processo)
                                 proc_pai(ips,\
                                         portas,\
@@ -125,9 +128,10 @@ def restart(nome_banco,id_tabela,resultado):
                                         dir_local,\
                                         frequencia,\
                                         codigo,\
-                                        banco_dados,\
+                                        nome_banco,\
+					json_config,\
                                         protocolo)
-                                os.system("python mon.py %s %s &" % (banco_dados,codigo))
+                                os.system("python mon.py %s %s &" % (nome_banco,codigo))
                 else: 
                                 print "Tabela vazia"
 
@@ -175,6 +179,7 @@ def verifica_inicio():
 							observacao = rows[i]['observacao']
 							dtapagou = rows[i]['dtapagou']
 							login_apagou = rows[i]['login_apagou']
+							json_config = rows[i]['json_config']
 							dir_local = "%s/" % (banco_dados)
 							nome_processo = "%s%s" % (banco_dados,codigo)
 							procname.setprocname(nome_processo)
@@ -190,6 +195,7 @@ def verifica_inicio():
 								frequencia,\
 								codigo,\
 								banco_dados,\
+								json_config,\
 								protocolo)
 							os.system("python mon.py %s %s &" % (banco_dados,codigo))
 						except KeyError:
@@ -211,6 +217,7 @@ def verifica_inicio():
 							observacao = rows[i]['observacao']
 							dtapagou = rows[i]['dtapagou']
 							login_apagou = rows[i]['login_apagou']
+							json_config = rows[i]['json_config']
 							dir_local = "%s/" % (banco_dados)
 							nome_processo = "%s%s" % (banco_dados,codigo)
 							procname.setprocname(nome_processo)
@@ -226,6 +233,7 @@ def verifica_inicio():
 								frequencia,\
 								codigo,\
 								banco_dados,\
+								json_config,\
 								protocolo)
 							os.system("python mon.py %s %s &" % (banco_dados,codigo))
 					else: 

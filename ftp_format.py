@@ -18,8 +18,9 @@ def PrintException():
 
 
 
-def lista_arquivos(ip,portas,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_remoto,dir_local,banco_dados,id_tabela):
+def lista_arquivos(ip,portas,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_remoto,dir_local,banco_dados,json_config,id_tabela):
 	ultimo_char_dir_remoto = dir_remoto[len(dir_remoto)-1]
+	global dir_mover_removo
 	dir_local = "%s%s/" % (dir_local, usuario)
 	if ultimo_char_dir_remoto != '/':
 		dir_remoto = "%s/" % (dir_remoto)
@@ -39,10 +40,11 @@ def lista_arquivos(ip,portas,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_r
 				if prefixo in nome_local and sufixo in nome_local:
 					ftp.retrbinary('RETR %s' % nome_real, open('%s%s' % (dir_local,nome_local), 'wb').write)
 					print "DIRETORIO REMOTO: %s" % dir_mover_remoto
-					if dir_mover_remoto != None:
+					diretorio_bkp = dir_mover_remoto
+					if dir_mover_remoto == None:
 				                ftp.delete(nome_real)
         				else:
-						nome_rename = "%s%s" % (dir_mover_removo,nome_local)
+						nome_rename = "%s%s" % (diretorio_bkp,nome_local)
 						ftp.rename(nome_local,nome_rename)
 					now = datetime.now()
 					raw_credenciais = open('login_banco.json').read()
@@ -73,14 +75,17 @@ def lista_arquivos(ip,portas,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_r
 
 					############ Envio POST
 					
-					arquivo = nome_local
-					url = "http://192.168.2.169/3allsys/db/envio_avulso.php"
-					f = {'csv': open(arquivo,'rb')}
-					v = {'login':'ifractal','senha':'danilo','cod_campanha': '41'}
-					r = requests.post(url = url, files = f, data = v)
-					print r.status_code
-					print r.headers
-					print r.text
+					arquivo = destino
+			                data = json.loads(json_config)
+			                url = data['arquivo_post']
+			                f = {data['tipo_arquivo']: open(arquivo,'rb')}
+			                v = data['posts']
+					print url
+			                r = requests.post(url = url, files = f, data = v)
+			                print r.status_code
+			                print r.headers
+			                print r.text
+
 					############ Fim Envio POST
 
 				else:
@@ -164,9 +169,9 @@ def lista_arquivos(ip,portas,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_r
                         conecta.commit()
 		pass
 
-def processa(ip,portas,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_remoto,dir_local,tempo,banco_dados,id_tabela):
+def processa(ip,portas,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_remoto,dir_local,tempo,banco_dados,json_config,id_tabela):
 	while True:
                 time.sleep(tempo)
-                lista_arquivos(ip,portas,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_remoto,dir_local,banco_dados,id_tabela)
+                lista_arquivos(ip,portas,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_remoto,dir_local,banco_dados,json_config,id_tabela)
 
 

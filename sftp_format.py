@@ -16,7 +16,7 @@ def PrintException():
 	line = linecache.getline(filename, lineno, f.f_globals)
 	print 'EXCEPTION IN ({}, LINE {} "{}"): {}'.format(filename, lineno, line.strip(), exc_obj)
 
-def lista_arquivos(ip,portas,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_remoto,dir_local,banco_dados,id_tabela):
+def lista_arquivos(ip,portas,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_remoto,dir_local,banco_dados,json_config,id_tabela):
 	global ssh
 	ultimo_char_dir_remoto = dir_remoto[len(dir_remoto)-1]
 	if ultimo_char_dir_remoto != '/':
@@ -33,7 +33,7 @@ def lista_arquivos(ip,portas,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_r
 			if prefixo in nome_real and sufixo in nome_real:
 				origem = "%s%s" % (dir_remoto,nome_real)
 				destino = "%s%s/%s" % (dir_local.replace('ifclick_',''),usuario,nome_real)
-				baixa_arquivos(origem.strip(),destino.strip(),ip,usuario,senha,dir_mover_remoto,nome_real,dir_local,banco_dados,id_tabela)
+				baixa_arquivos(origem.strip(),destino.strip(),ip,usuario,senha,dir_mover_remoto,nome_real,dir_local,banco_dados,json_config,id_tabela)
 				
 			elif prefixo is not nome_real and sufixo is nome_real:
 				sopranaoficarvazio = "0"
@@ -82,7 +82,7 @@ def lista_arquivos(ip,portas,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_r
 			conecta.commit()
 		
 
-def baixa_arquivos(origem,destino,ip,usuario,senha,dir_mover_remoto,nome_real,dir_local,banco_dados,id_tabela):
+def baixa_arquivos(origem,destino,ip,usuario,senha,dir_mover_remoto,nome_real,dir_local,banco_dados,json_config,id_tabela):
 	print "baixa_arquivos"
 	dir_local = "%s%s" % (dir_local, usuario)
 	now = datetime.now()
@@ -107,6 +107,18 @@ def baixa_arquivos(origem,destino,ip,usuario,senha,dir_mover_remoto,nome_real,di
 		ftp = ssh.open_sftp() 
 		ftp.get(origem, destino)
 		ftp.close()
+		############ Envio POST json_config
+                arquivo = destino
+		data = json.loads(json_config)
+		url = data['arquivo_post']
+		f = {data['tipo_arquivo']: open(arquivo,'rb')}
+		v = data['posts']
+		r = requests.post(url = url, files = f, data = v)
+		#print r.status_code
+		#print r.headers
+		#print r.text
+
+                ############ Fim Envio POST
 		hasher = hashlib.md5()
 		tam_arquivo = os.path.getsize(destino)
 		with open(destino, 'rb') as afile:
@@ -123,6 +135,17 @@ def baixa_arquivos(origem,destino,ip,usuario,senha,dir_mover_remoto,nome_real,di
 		ftp = ssh.open_sftp() 
                 ftp.get(origem, destino)
                 ftp.close()
+		############ Envio POST
+		arquivo = destino
+                data = json.loads(json_config)
+                url = data['arquivo_post']
+                f = {data['tipo_arquivo']: open(arquivo,'rb')}
+                v = data['posts']
+                r = requests.post(url = url, files = f, data = v)
+                #print r.status_code
+                #print r.headers
+                #print r.text
+                ############ Fim Envio POST
 		hasher = hashlib.md5()
                 tam_arquivo = os.path.getsize(destino)
                 with open(destino, 'rb') as afile:
@@ -141,9 +164,9 @@ def baixa_arquivos(origem,destino,ip,usuario,senha,dir_mover_remoto,nome_real,di
 	else:
 		ssh.exec_command("rm %s" % (origem))
 
-def processa(ip,portas,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_remoto,dir_local,tempo,banco_dados,id_tabela):
+def processa(ip,portas,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_remoto,dir_local,tempo,banco_dados,json_config,id_tabela):
 	while True:
                 time.sleep(tempo)
-                lista_arquivos(ip,portas,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_remoto,dir_local,banco_dados,id_tabela)
+                lista_arquivos(ip,portas,usuario,senha,prefixo,sufixo,dir_remoto,dir_mover_remoto,dir_local,banco_dados,json_config,id_tabela)
 
 
