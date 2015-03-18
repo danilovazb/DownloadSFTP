@@ -1,2 +1,0 @@
-insert-select-PostgreSQL
-========================

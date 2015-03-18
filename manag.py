@@ -15,22 +15,23 @@ guarda_pid = {}
 lista_threads = []
 
 def proc_filho(ips,portas,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia,protocolo,banco_dados,json_config,codigo):
+
 	if protocolo == 'ftp' or protocolo == 'FTP':
-		if portas != None:
+		if portas != None or portas == '':
 			ftp_format.processa(ips,portas,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia,banco_dados,json_config,codigo)
 		else:
 			portas = '21'
 			ftp_format.processa(ips,portas,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia,banco_dados,json_config,codigo)
 
 	elif protocolo == 'sftp' or protocolo == 'SFTP' or protocolo == 'scp' or protocolo == 'SCP':
-		if portas != None:
+		if portas != None or portas == '':
 			sftp_format.processa(ips,portas,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia,banco_dados,json_config,codigo)
 		else:
 			portas = '22'
                 	sftp_format.processa(ips,portas,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia,banco_dados,json_config,codigo)
 
 	else:
-		print "Falta o protocolo correto\nProtocolo atual: %s" % protocolo
+		print "\033[1;31m[-]\033[0m Falta o protocolo correto\nProtocolo atual: %s\n" % protocolo
 
 def proc_pai(ips,portas,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia,codigo,banco_dados,json_config,protocolo):
 	arquivoGrava = open('.pid.fhs','a')
@@ -39,15 +40,20 @@ def proc_pai(ips,portas,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mo
 		proc_filho(ips,portas,login,senha,prefixo,sufixo,diretorio_remoto,diretorio_mover_remoto,dir_local,frequencia,protocolo,banco_dados,json_config,codigo)
 		os.waitpid(pid_filho, 0)
 	arquivoGrava.write("%s;%s;%s\n" % (banco_dados,codigo,pid_filho))
-	#print pid_filho
+	print "\033[1;32m[+]\033[0m PID Filho iniciado: %s" % pid_filho
 
 def restart(nome_banco,id_tabela,resultado):
         #print("%s - %s" % (nome_banco,id_tabela))
-	raw_credenciais = open('login_banco.json').read()
+	raw_credenciais = open('confs/login_banco.json').read()
 	credencial = json.loads(raw_credenciais)
         usuario = credencial['login']
         senha = credencial['pass']
         servidor = credencial['address']
+	print "~~> Carregando configurações:\n"
+        print "  \033[1;32m[+]\033[0m Usuário: %s" % usuario
+        print "  \033[1;32m[+]\033[0m Senha: %s" % senha
+        print "  \033[1;32m[+]\033[0m Servidor: %s" % servidor
+        print "  \033[1;32m[+]\033[0m BD: %s\n\n" % banco_dados
 	#dir_local = 'Download/'
         conecta = psycopg2.connect(dbname=nome_banco, user=usuario, host=servidor, password=senha)
         query = conecta.cursor(cursor_factory=psycopg2.extras.DictCursor)
@@ -133,16 +139,20 @@ def restart(nome_banco,id_tabela,resultado):
                                         protocolo)
                                 os.system("python mon.py %s %s &" % (nome_banco,codigo))
                 else: 
-                                print "Tabela vazia"
+                                print "\033[1;31m[-]\033[0m Tabela vazia\n"
 
 def verifica_inicio():
 	#os.system("rm .pid.fhs")
-	raw_credenciais = open('login_banco.json').read()
+	raw_credenciais = open('confs/login_banco.json').read()
         credencial = json.loads(raw_credenciais)
         usuario = credencial['login']
         senha = credencial['pass']
         servidor = credencial['address']
 	banco = credencial['database']
+	print "~~> Carregando configurações:\n"
+	print "  \033[1;32m[+]\033[0m Usuario: %s" % usuario
+	print "  \033[1;32m[+]\033[0m Senha: %s" % senha
+	print "  \033[1;32m[+]\033[0m Servidor: %s\n" % servidor
         conn = psycopg2.connect(dbname=banco, user=usuario, host=servidor, password=senha)
         cur = conn.cursor()
         cur.execute("""SELECT * from pg_database WHERE datname NOT IN ('postgres','template0','template1')""")
@@ -160,6 +170,7 @@ def verifica_inicio():
 				for i in range(len(rows)):
 					if rows != None:
 						try:
+							print "\033[1;32m[+]\033[0m Carregando configurações de: %s" % banco_dados
 							#for row in rows:
 							codigo = rows[i]['codigo']
 							dtcadastro = rows[i]['dtcadastro']
@@ -183,21 +194,24 @@ def verifica_inicio():
 							dir_local = "%s/" % (banco_dados)
 							nome_processo = "%s%s" % (banco_dados,codigo)
 							procname.setprocname(nome_processo)
-							proc_pai(ips,\
-								portas,\
-								login,\
-								senha,\
-								prefixo,\
-								sufixo,\
-								diretorio_remoto,\
-								diretorio_mover_remoto,\
-								dir_local,\
-								frequencia,\
-								codigo,\
-								banco_dados,\
-								json_config,\
-								protocolo)
-							os.system("python mon.py %s %s &" % (banco_dados,codigo))
+							if login_apagou == None:
+								proc_pai(ips,\
+									portas,\
+									login,\
+									senha,\
+									prefixo,\
+									sufixo,\
+									diretorio_remoto,\
+									diretorio_mover_remoto,\
+									dir_local,\
+									frequencia,\
+									codigo,\
+									banco_dados,\
+									json_config,\
+									protocolo)
+								os.system("python mon.py %s %s &" % (banco_dados,codigo))
+							else:
+								lol = 'sopranaoficarvazio'
 						except KeyError:
 							codigo = rows[i]['codigo']
 							dtcadastro = rows[i]['dtcadastro']
@@ -221,23 +235,26 @@ def verifica_inicio():
 							dir_local = "%s/" % (banco_dados)
 							nome_processo = "%s%s" % (banco_dados,codigo)
 							procname.setprocname(nome_processo)
-							proc_pai(ips,\
-								portas,\
-								login,\
-								senha,\
-								prefixo,\
-								sufixo,\
-								diretorio_remoto,\
-								diretorio_mover_remoto,\
-								dir_local,\
-								frequencia,\
-								codigo,\
-								banco_dados,\
-								json_config,\
-								protocolo)
-							os.system("python mon.py %s %s &" % (banco_dados,codigo))
+							if login_apagou == None:
+                                                                proc_pai(ips,\
+                                                                        portas,\
+                                                                        login,\
+                                                                        senha,\
+                                                                        prefixo,\
+                                                                        sufixo,\
+                                                                        diretorio_remoto,\
+                                                                        diretorio_mover_remoto,\
+                                                                        dir_local,\
+                                                                        frequencia,\
+                                                                        codigo,\
+                                                                        banco_dados,\
+                                                                        json_config,\
+                                                                        protocolo)
+                                                                os.system("python mon.py %s %s &" % (banco_dados,codigo))
+                                                        else:
+                                                                lol = 'sopranaoficarvazio'
 					else: 
-							print "Tabela vazia"	
+							print "\033[1;31m[-]\033[0m Tabela vazia\n"	
 					
 					 
 
@@ -245,10 +262,13 @@ def verifica_inicio():
 if __name__ == '__main__':
 	argumento = sys.argv[1]
 	if 'start' == argumento:
+		os.system("clear")
+		print "\033[1;32m[+]\033[0m Iniciando gerenciamento de downloads...\n\n"
 		verifica_inicio()
 	elif 'restart' == argumento:
 		nome_banco = sys.argv[2]
 		id_tabela = sys.argv[3]
 		resultado = [4]
+		print "\033[1;33m[+]\033[0m Reiniciando %s\n" % nome_banco
 		restart(nome_banco,id_tabela,resultado)
 

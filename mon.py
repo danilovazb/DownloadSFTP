@@ -19,7 +19,8 @@ def monitor(banco, codigo):
 					if p.status() == psutil.STATUS_ZOMBIE:
 						print("Processo ZOMBIE: %s" % (pid))
 					else:
-						print("Existe: %s" % (pid))
+						#print("Existe: %s" % (pid))
+						sopranaoficarvazio = '1'
 				else:
 					print("Processo MORTO: %s" % (pid))
 					os.system("python manag.py restart %s %s %s &" % (banco, codigo, pid))
