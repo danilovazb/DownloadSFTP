@@ -7,7 +7,9 @@ Sistema em python para realizar downloads via FTP, SFTP e SCP automáticos em pa
 Usado para o download automático de arquivos em clientes.
 
 ### Atualizações ###
-Um sistema simples, mudei algumas coisas no sistema, procurei deixar o código um pouco mais limpo, de fácil entendimento.
+Um sistema simples, mudei algumas coisas para tentar facilitar ainda mais, procurei deixar o código um pouco mais limpo, de fácil entendimento. Acrescentei também o envio de e-mail caso tenha algum erro, ainda há bugs para arrumar já que esse sistema é meio que feio sob medida para o que uso hoje, mas da pra ser facilmente adaptado para qualquer um que queira um sistema de downloads automaticos.
+
+Se repararem no código do sftp e ftp, eu faço um POST em uma pagina PHP, ele server para enviar os arquivos para um sistema de processamento dos mesmos, basta comentar onde ele faz essa requisição.
 
 ## Libs necessárias ##
 
