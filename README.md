@@ -29,14 +29,6 @@ Altere as configurações do banco no arquivo abaixo:
 
 * ~>~/$ dwftp/confs/login_banco.json 
 
-Inicie primeiro o server.py, ele vai dar o start nos processos, a princípio é preciso que já tenha algum processo de download cadastrado no banco para que ele funcione.
+Iniciar no terminal, basta seguir o comando abaixo:
 
-```$ python server.py```
-
-Após o servidor inciado, vá até o navegador e entre no link http://localhost:5000/manager/start para iniciar realmente o processo.
-
-Ou caso queira iniciar no terminal, basta seguir o comando abaixo:
-
-```$ python manag.py start```
-
-Ele também funciona da mesma maneira que o webservice.
+```$ python manag.py -s start```
