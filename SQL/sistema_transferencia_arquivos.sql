@@ -17,7 +17,8 @@ CREATE TABLE servidor_arquivo
 	desc_situacao varchar(255), 
 	observacao text,
 	dtapagou timestamp NOT NULL DEFAULT '1970-01-01 00:00:00',
-	login_apagou varchar(20)
+	login_apagou varchar(20),
+	json_config varchar(150)
 );
 CREATE TABLE log_servidor_arquivo
 (

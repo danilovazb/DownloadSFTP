@@ -1,6 +1,0 @@
-paramiko
-flask
-procname
-psycopg2
-pidmon
-psutil
