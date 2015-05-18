@@ -4,7 +4,10 @@ DownloadSFTP
 ## Descrição ##
 
 Sistema em python para realizar downloads via FTP, SFTP e SCP automáticos em pastas pré-definidas pelo usuário.
-Usado para o download automático.
+Usado para o download automático de arquivos em clientes.
+
+### Atualizações ###
+Um sistema simples, mudei algumas coisas no sistema, procurei deixar o código um pouco mais limpo, de fácil entendimento.
 
 ## Libs necessárias ##
 
